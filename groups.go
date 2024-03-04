@@ -2,18 +2,23 @@ package Rogo
 
 import (
 	"fmt"
-	"github.com/carlmjohnson/requests"
 	"time"
 )
 
+type GroupUser struct {
+	BaseUser
+	Id   int    `json:"userId"`
+	Name string `json:"username"`
+}
+
 type BaseGroup struct {
-	Id          int      `json:"id"`
-	Name        string   `json:"name"`
-	Description string   `json:"description"`
-	Owner       BaseUser `json:"owner"`
+	Id          int       `json:"id"`
+	Name        string    `json:"name"`
+	Description string    `json:"description"`
+	Owner       GroupUser `json:"owner"`
 	Shout       struct {
 		Body    string    `json:"body"`
-		Poster  BaseUser  `json:"poster"`
+		Poster  GroupUser `json:"poster"`
 		Created time.Time `json:"created"`
 		Updated time.Time `json:"updated"`
 	}
@@ -40,22 +45,9 @@ type Roles struct {
 	Roles   []BaseRole `json:"roles"`
 }
 
-type GroupUser struct {
-	BaseUser
-	Id   int    `json:"userId"`
-	Name string `json:"username"`
-}
-
 type BaseMember struct {
 	User GroupUser `json:"user"`
 	Role BaseRole  `json:"role"`
-}
-
-func (c *Client) getGroupRequest() *requests.Builder {
-	return requests.
-		New(c.config).
-		BaseURL("https://groups.roblox.com/v1/groups/")
-
 }
 
 func (c *Client) GetGroup(groupId int) (*Group, error) {
@@ -66,8 +58,8 @@ func (c *Client) GetGroup(groupId int) (*Group, error) {
 		return nil, fmt.Errorf("httpclient is nil")
 	}
 
-	err := c.getGroupRequest().
-		Path(fmt.Sprintf("%d", groupId)).
+	err := c.getRequest("groups").
+		Path(fmt.Sprintf("v1/groups/%d", groupId)).
 		ToJSON(&group).
 		Fetch(ctx)
 
@@ -82,19 +74,23 @@ func (g *Group) getClient() (*Client, error) {
 	return client, nil
 }
 
-func (g *Group) GetRoles() (*Roles, error) {
+func (g *Group) GetRoles() ([]BaseRole, error) {
 	client, err := g.getClient()
 	if err != nil {
 		return nil, err
 	}
 
 	var roles Roles
-	err = client.getGroupRequest().
-		Path(fmt.Sprintf("%d/roles", g.Id)).
+	err = client.getRequest("groups").
+		Path(fmt.Sprintf("v1/groups/%d/roles", g.Id)).
 		ToJSON(&roles).
 		Fetch(ctx)
 
-	return &roles, err
+	if err != nil {
+		return nil, err
+	}
+
+	return roles.Roles, err
 }
 
 func (g *Group) GetRole(roleNumber int) (*BaseRole, error) {
@@ -103,7 +99,7 @@ func (g *Group) GetRole(roleNumber int) (*BaseRole, error) {
 		return nil, err
 	}
 
-	for _, role := range roles.Roles {
+	for _, role := range roles {
 		var result bool
 		if roleNumber <= 255 {
 			result = role.Rank == roleNumber
@@ -125,8 +121,8 @@ func (g *Group) SetRank(userId int, roleId int) error {
 		return err
 	}
 
-	err = client.getGroupRequest().
-		Path(fmt.Sprintf("%d/users/%d", g.Id, userId)).
+	err = client.getRequest("groups").
+		Path(fmt.Sprintf("v1/groups/%d/users/%d", g.Id, userId)).
 		BodyJSON(map[string]int{
 			"roleId": roleId,
 		}).
@@ -142,8 +138,8 @@ func (g *Group) Exile(userId int) error {
 		return err
 	}
 
-	err = client.getGroupRequest().
-		Path(fmt.Sprintf("%d/users/%d", g.Id, userId)).
+	err = client.getRequest("groups").
+		Path(fmt.Sprintf("v1/groups/%d/users/%d", g.Id, userId)).
 		Delete().
 		Fetch(ctx)
 
@@ -156,8 +152,8 @@ func (g *Group) Join() error {
 		return err
 	}
 
-	err = client.getGroupRequest().
-		Path(fmt.Sprintf("%d/users", g.Id)).
+	err = client.getRequest("groups").
+		Path(fmt.Sprintf("v1/groups/%d/users", g.Id)).
 		Post().
 		Fetch(ctx)
 
@@ -173,8 +169,8 @@ func (g *Group) GetMembers() (*Pagination[BaseMember], error) {
 	var members Pagination[BaseMember]
 	members.client = client
 	members.URL = fmt.Sprintf("https://groups.roblox.com/v1/groups/%d/users", g.Id)
-	err = client.getGroupRequest().
-		Path(fmt.Sprintf("%d/users", g.Id)).
+	err = client.getRequest("groups").
+		Path(fmt.Sprintf("v1/groups/%d/users", g.Id)).
 		ToJSON(&members).
 		Fetch(ctx)
 

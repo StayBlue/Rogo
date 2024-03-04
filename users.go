@@ -2,7 +2,6 @@ package Rogo
 
 import (
 	"fmt"
-	"github.com/carlmjohnson/requests"
 	"time"
 )
 
@@ -28,12 +27,6 @@ type User struct {
 	Banned      bool      `json:"isBanned"`
 }
 
-func (c *Client) getUserRequest() *requests.Builder {
-	return requests.
-		New(c.config).
-		BaseURL("https://users.roblox.com/v1/users/")
-}
-
 func (c *Client) GetUser(userId int) (*User, error) {
 	var user User
 	user.client = c
@@ -42,8 +35,8 @@ func (c *Client) GetUser(userId int) (*User, error) {
 		return nil, fmt.Errorf("httpclient is nil")
 	}
 
-	err := c.getUserRequest().
-		Path(fmt.Sprintf("%d", userId)).
+	err := c.getRequest("users").
+		Path(fmt.Sprintf("v1/users/%d", userId)).
 		ToJSON(&user).
 		Fetch(ctx)
 

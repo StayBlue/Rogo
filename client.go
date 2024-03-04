@@ -34,6 +34,11 @@ func tokenHandler(token *string) rehttp.RetryFn {
 	}
 }
 
+func (c *Client) getRequest(endpoint string) *requests.Builder {
+	return requests.New(c.config).
+		Hostf("%s.roblox.com", endpoint)
+}
+
 func NewClient(token string) *Client {
 	jar := requests.NewCookieJar()
 
