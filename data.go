@@ -1,4 +1,4 @@
-package Rogo
+package rogo
 
 import (
 	"github.com/carlmjohnson/requests"

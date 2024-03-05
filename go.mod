@@ -1,4 +1,4 @@
-module github.com/StayBlue/Rogo
+module github.com/StayBlue/rogo
 
 go 1.22
 
